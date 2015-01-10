@@ -28,6 +28,8 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
     # generate key paths and match
     source_key_path                  = keypathgen.source_key_path()
     matched_key_paths, matched_paths = keypathgen.matched_candidate_key_paths()
+    
+    # rank and print results
     for i,candidate_key_path in enumerate(matched_key_paths):
         rank = ranker.rank(source_key_path, candidate_key_path)
         print rank, matched_paths[i]
