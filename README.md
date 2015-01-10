@@ -20,16 +20,15 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
     # create source and candidate paths
     source_path     =  schema.Path().add_node(..)
     candidate_paths = [schema.Path().add_node(..), ..]
-    
-    # create Path Generator and Ranker objects
-    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
-    ranker     = schema.KeyPathRanker()
-    
+
     # generate key paths and match
+    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
     source_key_path                  = keypathgen.source_key_path()
     matched_key_paths, matched_paths = keypathgen.matched_candidate_key_paths()
-    
+
     # rank and print results
+    ranker = schema.KeyPathRanker()
     for i,candidate_key_path in enumerate(matched_key_paths):
         rank = ranker.rank(source_key_path, candidate_key_path)
         print rank, matched_paths[i]
+        
