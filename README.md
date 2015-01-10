@@ -19,6 +19,7 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
     wcategory = "Cottage Cheese"
     Wchildren = []
     wtarget = ...
+    
     matcher = schema.SemanticMatcher()
     e = schema.ExtendedSplitTermSet(wcategory, wparent, Wchildren)
     E = e.split_terms()
