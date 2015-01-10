@@ -9,7 +9,7 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
 
 
 ### Required modules
-* nltk with wordnet download
+* nltk with wordnet download (see http://www.nltk.org/data.html)
 * Levenshtein
  
 ### Example usage
