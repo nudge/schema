@@ -16,13 +16,18 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
 
 ### Example usage
     import schema
-    tnode = 0.8
-    wparent = "Cheese & Cheese Alternatives"
-    wcategory = "Cottage Cheese"
-    Wchildren = []
-    wtarget = ...
+ 
+    # create source and candidate paths
+    source_path     =  schema.Path().add_node(..)
+    candidate_paths = [schema.Path().add_node(..), ..]
     
-    matcher = schema.SemanticMatcher()
-    e = schema.ExtendedSplitTermSet(wcategory, wparent, Wchildren)
-    E = e.split_terms()
-    m = matcher.match(E, wtarget, tnode)
+    # create Path Generator and Ranker objects
+    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
+    ranker     = schema.KeyPathRanker()
+    
+    # generate key paths and match
+    source_key_path                  = keypathgen.source_key_path()
+    matched_key_paths, matched_paths = keypathgen.matched_candidate_key_paths()
+    for i,candidate_key_path in enumerate(matched_key_paths):
+        rank = ranker.rank(source_key_path, candidate_key_path)
+        print rank, matched_paths[i]
