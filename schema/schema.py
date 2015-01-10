@@ -45,16 +45,21 @@ from nltk.corpus import wordnet as wn
 
     import schema
 
-    tnode = 0.8
-    wparent = "Cheese & Cheese Alternatives"
-    wcategory = "Cottage Cheese"
-    Wchildren = []
-    wtarget = ...
+    # create source and candidate paths
+    source_path     =  schema.Path().add_node(..)
+    candidate_paths = [schema.Path().add_node(..), ..]
 
-    matcher = schema.SemanticMatcher()
-    e = schema.ExtendedSplitTermSet(wcategory, wparent, Wchildren)
-    E = e.split_terms()
-    m = matcher.match(E, wtarget, tnode)
+    # create Path Generator and Ranker objects
+    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
+    ranker     = schema.KeyPathRanker()
+    
+    # generate key paths and match
+    source_key_path                  = keypathgen.source_key_path()
+    matched_key_paths, matched_paths = keypathgen.matched_candidate_key_paths()
+
+    for i,candidate_key_path in enumerate(matched_key_paths):
+        rank = ranker.rank(source_key_path, candidate_key_path)
+        print rank, matched_paths[i]
 
     """
 
@@ -192,7 +197,7 @@ class SemanticMatcher(object):
 
 
 # -----------------------------------------------------------------------------
-# Candidate Target Path Key Comparison
+# Candidate Target Path Key Comparison                                         
 # -----------------------------------------------------------------------------
 
 class SourceNode(object):
@@ -231,6 +236,7 @@ class Path(object):
     def add_node(self, node):
         ''' Add a SourceNode object to the path. '''
         self.nodes.append(node)
+        return self
 
 class CandidateNode(object):
     ''' Repesents a node in the candidate path. '''
@@ -242,8 +248,8 @@ class CandidateNode(object):
     def __repr__(self):
         return self.wtarget
 
-class PathRanker(object):
-    ''' Candidate Target Path Key Comparison and Ranking '''
+class KeyPathGenerator(object):
+    ''' Candidate Target Path Key Generator '''
 
     def __init__(self, source_path, candidate_paths):
         self.source_path = source_path
@@ -274,12 +280,12 @@ class PathRanker(object):
                         b.key = unichr(self.node_key_counter)
                         self.node_key_counter+=1
 
-    def source_path_keyed(self):
+    def source_key_path(self):
         ''' Returns the source key path. '''
         path = [n.key for n in self.source_path]
         return ''.join(path) if len(path)>1 else path[0]
 
-    def candidate_paths_keyed(self):
+    def matched_candidate_key_paths(self):
         ''' Returns a tuple containing a list of candidate key paths and their
             matching candidate paths. '''
         keyed_paths = []
@@ -292,7 +298,7 @@ class PathRanker(object):
         return (keyed_paths, matched_paths)
 
     def _match_candidate_paths(self, candidate_paths):
-        ''' Retured the list of candidate paths that match the source path. '''
+        ''' Returns the list of candidate paths that match the source path. '''
         matched_candidate_paths = set()
         for candidate_path in candidate_paths:
             m = self._match_candidate_path(candidate_path)
@@ -321,6 +327,9 @@ class PathRanker(object):
             if b.key is None:
                 b.key = unichr(self.node_key_counter)
                 self.node_key_counter+=1
+
+class KeyPathRanker(object):
+    ''' Candidate Target Key Path Ranker '''
 
     def rank(self, src, tgt):
         ''' Returns the rank of the source and target paths. '''
