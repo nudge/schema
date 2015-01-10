@@ -36,7 +36,7 @@ from nltk.corpus import wordnet as wn
 
     Required modules:
     
-      * nltk with wordnet download
+      * nltk with wordnet download (see http://www.nltk.org/data.html)
       * Levenshtein
       * pyxdameraulevenshtein
 
@@ -65,7 +65,7 @@ from nltk.corpus import wordnet as wn
 def _split_composite(w):
     ''' Splits composite category name w into a set of individual classes:
     a split term set W. '''
-    m = re.split(', | & | and | ', w)
+    m = re.split(', | & | and ', w)
     return set([s.lower() for s in m])
 
 def _longest_common_substring(wa, wb):
@@ -174,6 +174,8 @@ class SemanticMatcher(object):
         and wtarget, with a node matching threshold specified by tnode. '''
         Wtarget = _split_composite(wtarget)
         subSetOf = True
+        if not E:
+            return False
         for SsrcSplit in E:
             matchFound = False
             p=itertools.product([SsrcSplit], Wtarget)
@@ -246,14 +248,18 @@ class PathRanker(object):
     def __init__(self, source_path, candidate_paths):
         self.source_path = source_path
         self.candidate_paths = candidate_paths
+        self.matched_candidate_paths = []
         self.node_key_counter = 0
-        self.tnode = 0.9
+        self.tnode = 0.8
 
-        self._keyed_source_path(source_path)
-        for c in candidate_paths:
-            self._keyed_candidate_path(c)
+        self._key_source_path(source_path)
+        self.matched_candidate_paths = self._match_candidate_paths(candidate_paths)
 
-    def _keyed_source_path(self, source_path):
+        for candidate_path in self.matched_candidate_paths:
+            self._key_candidate_path(candidate_path)
+
+    def _key_source_path(self, source_path):
+        ''' Returns a keyed source path for the given source path. ''' 
         for i,a in enumerate(source_path):
             if i == 0:
                 if a.key is None:
@@ -274,16 +280,37 @@ class PathRanker(object):
         return ''.join(path) if len(path)>1 else path[0]
 
     def candidate_paths_keyed(self):
-        ''' Returns a list of candidate key paths. '''
+        ''' Returns a tuple containing a list of candidate key paths and their
+            matching candidate paths. '''
         keyed_paths = []
-        for candidate_path in self.candidate_paths:
+        matched_paths = []
+        for candidate_path in self.matched_candidate_paths:
             path = [n.key for n in candidate_path]
             path = ''.join(path) if len(path)>1 else path[0]
             keyed_paths.append(path)
-        return keyed_paths
+            matched_paths.append(candidate_path)
+        return (keyed_paths, matched_paths)
 
-    def _keyed_candidate_path(self, candidate_path):
+    def _match_candidate_paths(self, candidate_paths):
+        ''' Retured the list of candidate paths that match the source path. '''
+        matched_candidate_paths = set()
+        for candidate_path in candidate_paths:
+            m = self._match_candidate_path(candidate_path)
+            if m is True:
+                matched_candidate_paths.update([candidate_path])
+                continue
+        return matched_candidate_paths
+
+    def _match_candidate_path(self, candidate_path):
+        for a in self.source_path:
+            for b in candidate_path:
+                if a.matches_candidate(b, self.tnode):
+                    return True
+
+    def _key_candidate_path(self, candidate_path):
+        ''' Returns a keyed candidate path for the given candidate path. ''' 
         matchFound = False
+
         for a in self.source_path:
             for b in candidate_path:
                 if a.matches_candidate(b, self.tnode):
@@ -297,7 +324,7 @@ class PathRanker(object):
 
     def rank(self, src, tgt):
         ''' Returns the rank of the source and target paths. '''
-        p = 0.5 # penalty
+        p = len(set(tgt) - set(src))
         a = normalized_damerau_levenshtein_distance(unicode(src), unicode(tgt)) + p
         b = max(len(src), len(tgt)) + p
         candidateScore = 1 - (a/b)
