@@ -11,7 +11,9 @@ Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
 ### Required modules
 * nltk with wordnet download (see http://www.nltk.org/data.html)
 * Levenshtein
+* pyxdameraulevenshtein
  
+
 ### Example usage
     import schema
     tnode = 0.8
