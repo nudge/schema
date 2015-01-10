@@ -1,8 +1,7 @@
 from __future__ import division
 
-import itertools, re
-import Levenshtein
-import nltk
+import itertools, re, Levenshtein
+from pyxdameraulevenshtein import normalized_damerau_levenshtein_distance
 from nltk.corpus import wordnet as wn
 
 #
@@ -28,7 +27,8 @@ from nltk.corpus import wordnet as wn
 """ A Python implementation of SCHEMA - An Algorithm for Automated Product
     Taxonomy Mapping in E-commerce.
 
-    Based of the SCHEMA algorithm proposed by Aanen, et al.
+    Based on the Semantic Category Hierarchy for E-commerce Mapping Algorithm
+    (SCHEMA) proposed by Aanen, et al.
     Ref: http://disi.unitn.it/~p2p/RelatedWork/Matching/Aanen_eswc_2012.pdf
 
     Author: David Ng <david@theopenlabel.com>, <nudgeee@gmail.com>
@@ -38,6 +38,7 @@ from nltk.corpus import wordnet as wn
     
       * nltk with wordnet download
       * Levenshtein
+      * pyxdameraulevenshtein
 
 
     Example usage:
@@ -109,7 +110,7 @@ class ExtendedSplitTermSet(object):
     def split_terms(self):
         ''' Returns the extended split term set. '''
         Wcategory=_split_composite(self.wcategory)
-        Wparent=_split_composite(self.wparent)
+        Wparent=_split_composite(self.wparent) if self.wparent else set()
         Wchild=set()
         for w in self.Wchildren:
             Wchild=Wchild | _split_composite(w)
@@ -150,7 +151,7 @@ class ExtendedSplitTermSet(object):
         ''' Gives synonym sets directly related to synset S in WordNet, based on
         hypernymy, hyponymy, meronymy and holonymy. Result includes synset S as well.
         '''
-        related=[]
+        related=[S]
         related.extend(S.hypernyms())
         related.extend(S.hyponyms())
         related.extend(S.part_meronyms())
@@ -186,5 +187,120 @@ class SemanticMatcher(object):
             if matchFound == False:
                 subSetOf = False
         return subSetOf
+
+
+# -----------------------------------------------------------------------------
+# Candidate Target Path Key Comparison
+# -----------------------------------------------------------------------------
+
+class SourceNode(object):
+    ''' Repesents a node in the source path. '''
+
+    def __init__(self, wcategory, wparent, Wchildren):
+        self.key = None
+        self.wcategory = wcategory
+        self.wparent = wparent
+        self.Wchildren = Wchildren
+        self.m = SemanticMatcher()
+
+        e = ExtendedSplitTermSet(wcategory, wparent, Wchildren)
+        self.split_terms = e.split_terms()
+
+    def __eq__(self, target):
+        ''' Two source nodes are equal if their extended split terms are the
+            equivalent.'''
+        return self.split_terms == target.split_terms
+
+    def matches_candidate(self, candidate_node, tnode):
+        return self.m.match(self.split_terms, candidate_node.wtarget, tnode)
+
+class Path(object):
+    ''' Repesents a path, which is an ordered list of node objects. '''
+
+    def __init__(self):
+        self.nodes = []
+
+    def __iter__(self):
+        return iter(self.nodes)
+
+    def __getitem__(self, key):
+        return self.nodes.__getitem__(key)
+
+    def add_node(self, node):
+        ''' Add a SourceNode object to the path. '''
+        self.nodes.append(node)
+
+class CandidateNode(object):
+    ''' Repesents a node in the candidate path. '''
+
+    def __init__(self, wtarget):
+        self.key = None
+        self.wtarget = wtarget
+
+    def __repr__(self):
+        return self.wtarget
+
+class PathRanker(object):
+    ''' Candidate Target Path Key Comparison and Ranking '''
+
+    def __init__(self, source_path, candidate_paths):
+        self.source_path = source_path
+        self.candidate_paths = candidate_paths
+        self.node_key_counter = 0
+        self.tnode = 0.9
+
+        self._keyed_source_path(source_path)
+        for c in candidate_paths:
+            self._keyed_candidate_path(c)
+
+    def _keyed_source_path(self, source_path):
+        for i,a in enumerate(source_path):
+            if i == 0:
+                if a.key is None:
+                    a.key = unichr(self.node_key_counter)
+                    self.node_key_counter+=1
+            for j,b in enumerate(source_path[i+1:]):
+                if a == b:
+                    b.key = a.key
+                    break
+                else:
+                    if b.key is None:
+                        b.key = unichr(self.node_key_counter)
+                        self.node_key_counter+=1
+
+    def source_path_keyed(self):
+        ''' Returns the source key path. '''
+        path = [n.key for n in self.source_path]
+        return ''.join(path) if len(path)>1 else path[0]
+
+    def candidate_paths_keyed(self):
+        ''' Returns a list of candidate key paths. '''
+        keyed_paths = []
+        for candidate_path in self.candidate_paths:
+            path = [n.key for n in candidate_path]
+            path = ''.join(path) if len(path)>1 else path[0]
+            keyed_paths.append(path)
+        return keyed_paths
+
+    def _keyed_candidate_path(self, candidate_path):
+        matchFound = False
+        for a in self.source_path:
+            for b in candidate_path:
+                if a.matches_candidate(b, self.tnode):
+                    b.key = a.key
+                    matchFound = True
+
+        for b in candidate_path:
+            if b.key is None:
+                b.key = unichr(self.node_key_counter)
+                self.node_key_counter+=1
+
+    def rank(self, src, tgt):
+        ''' Returns the rank of the source and target paths. '''
+        p = 0.5 # penalty
+        a = normalized_damerau_levenshtein_distance(unicode(src), unicode(tgt)) + p
+        b = max(len(src), len(tgt)) + p
+        candidateScore = 1 - (a/b)
+        return candidateScore
 
 
