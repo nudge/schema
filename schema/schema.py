@@ -49,14 +49,13 @@ from nltk.corpus import wordnet as wn
     source_path     =  schema.Path().add_node(..)
     candidate_paths = [schema.Path().add_node(..), ..]
 
-    # create Path Generator and Ranker objects
-    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
-    ranker     = schema.KeyPathRanker()
-    
     # generate key paths and match
+    keypathgen = schema.KeyPathGenerator(source_path, candidate_paths)
     source_key_path                  = keypathgen.source_key_path()
     matched_key_paths, matched_paths = keypathgen.matched_candidate_key_paths()
 
+    # rank and print results
+    ranker = schema.KeyPathRanker()
     for i,candidate_key_path in enumerate(matched_key_paths):
         rank = ranker.rank(source_key_path, candidate_key_path)
         print rank, matched_paths[i]
@@ -213,6 +212,9 @@ class SourceNode(object):
         e = ExtendedSplitTermSet(wcategory, wparent, Wchildren)
         self.split_terms = e.split_terms()
 
+    def __repr__(self):
+        return str("{0}".format(self.wcategory))
+
     def __eq__(self, target):
         ''' Two source nodes are equal if their extended split terms are the
             equivalent.'''
@@ -232,6 +234,9 @@ class Path(object):
 
     def __getitem__(self, key):
         return self.nodes.__getitem__(key)
+
+    def __repr__(self):
+        return str(self.nodes)
 
     def add_node(self, node):
         ''' Add a SourceNode object to the path. '''
