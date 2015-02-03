@@ -1,7 +1,7 @@
 # schema
 A Python implementation of SCHEMA - An Algorithm for Automated Product Taxonomy Mapping in E-commerce.
 
-Based of the SCHEMA algorithm proposed by Aanen, et al.
+Based on the SCHEMA algorithm proposed by Aanen, et al.
 
 Ref: http://disi.unitn.it/~p2p/RelatedWork/Matching/Aanen_eswc_2012.pdf
 
